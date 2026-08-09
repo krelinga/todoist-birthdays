@@ -1,0 +1,12 @@
+# Copy to config.yaml and mount read-only at /config/config.yaml.
+# Keyed by name; the same name (normalized) is used as the dedupe key in
+# state.json, so renaming a person here starts their dedupe history over.
+people:
+  "Jane Doe":
+    birthday: "1990-05-14" # full ISO date; year is used for "turning N" in the task text
+    notice: 7 # days of advance notice; omit to default to 0 (fires on the birthday itself)
+    priority: "p2" # optional: p1 (urgent) .. p4 (default). Omit for p4.
+  "John Smith":
+    birthday: "1985-12-02"
+    # notice omitted -> defaults to 0
+    # priority omitted -> defaults to p4

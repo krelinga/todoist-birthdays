@@ -1,0 +1,15 @@
+services:
+  birthday-reminder:
+    build: .
+    restart: unless-stopped
+    environment:
+      - TODOIST_API_TOKEN=${TODOIST_API_TOKEN}
+      - TODOIST_PROJECT_NAME=${TODOIST_PROJECT_NAME:-Birthdays}
+      - TZ=${TZ:-America/Chicago}
+      - RUN_AT=${RUN_AT:-08:00}
+      - METRICS_PORT=${METRICS_PORT:-9090}
+    ports:
+      - "9090:9090" # for Prometheus to scrape
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+      - ./data:/data
