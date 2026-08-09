@@ -1,0 +1,54 @@
+from datetime import time as time_of_day
+
+import pytest
+
+from birthday_todoist import main as main_module
+from birthday_todoist.engine import ReminderEngine
+from birthday_todoist.main import parse_run_at
+
+
+class TestParseRunAt:
+    def test_parses_hh_mm(self):
+        assert parse_run_at("08:00") == time_of_day(8, 0)
+        assert parse_run_at("23:45") == time_of_day(23, 45)
+
+    def test_invalid_format_raises_system_exit(self):
+        with pytest.raises(SystemExit):
+            parse_run_at("not-a-time")
+
+
+class TestMainWiring:
+    def test_missing_required_env_var_exits(self, monkeypatch):
+        monkeypatch.delenv("TODOIST_API_TOKEN", raising=False)
+        monkeypatch.delenv("TODOIST_PROJECT_NAME", raising=False)
+
+        with pytest.raises(SystemExit):
+            main_module.main()
+
+    def test_wires_engine_and_starts_loop(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("TODOIST_API_TOKEN", "token-123")
+        monkeypatch.setenv("TODOIST_PROJECT_NAME", "Birthdays")
+        monkeypatch.setenv("TZ", "America/Chicago")
+        monkeypatch.setenv("RUN_AT", "09:30")
+        monkeypatch.setenv("CONFIG_PATH", str(tmp_path / "config.yaml"))
+        monkeypatch.setenv("STATE_PATH", str(tmp_path / "state.json"))
+        monkeypatch.setenv("METRICS_PORT", "9191")
+
+        started_ports = []
+        monkeypatch.setattr(main_module, "start_http_server", started_ports.append)
+
+        run_forever_calls = []
+
+        def fake_run_forever(tick, *, tz, run_at, **kwargs):
+            run_forever_calls.append((tick, tz, run_at))
+
+        monkeypatch.setattr(main_module, "run_forever", fake_run_forever)
+
+        main_module.main()
+
+        assert started_ports == [9191]
+        assert len(run_forever_calls) == 1
+        tick, tz, run_at = run_forever_calls[0]
+        assert run_at == time_of_day(9, 30)
+        assert str(tz) == "America/Chicago"
+        assert tick.__self__.__class__ is ReminderEngine
