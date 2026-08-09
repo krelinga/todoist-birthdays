@@ -66,10 +66,20 @@ with the same env vars exported and `CONFIG_PATH`/`STATE_PATH` pointed at local
 files (they default to `/config/config.yaml` and `/data/state.json`, which only
 exist inside the container).
 
+## CI / image publishing
+
+`.github/workflows/docker-publish.yml` is manual-only (`workflow_dispatch`,
+triggered from the Actions tab) — it builds the Dockerfile and pushes to
+`ghcr.io/krelinga/todoist-birthdays`, tagged with the input tag (default
+`latest`) and the commit SHA. Auth uses the automatic `GITHUB_TOKEN`
+(`permissions: packages: write` in the workflow) — no secrets to create.
+There is no push/PR-triggered CI (no lint/test workflow) yet.
+
 ## Next steps for future instances
 
 - Run the container against a real Todoist account/project to validate the
   end-to-end flow (project resolution, task creation, dedupe across a restart).
-- Wire up whatever CI the user wants (this repo currently has none).
+- Consider adding a push/PR-triggered lint+test workflow (only the manual
+  image-publish workflow exists so far).
 - Nothing has been pushed to `origin/main` yet — check with the user before
   pushing local commits.
