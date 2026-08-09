@@ -11,13 +11,15 @@ The goal of this project is to build a system to automatically generate birthday
 ## Project status
 
 This repository is currently an empty scaffold. It contains only a devcontainer
-configuration (`.devcontainer/devcontainer.json`) — no application code, README,
-build tooling, or tests exist yet.
+configuration and the design doc (`docs/design/birthday-todoist-reminder-design.md`)
+— no application code, README, build tooling, or tests exist yet.
 
 ## Development environment
 
-The devcontainer is based on `mcr.microsoft.com/devcontainers/base:ubuntu` with:
+The devcontainer is based on `mcr.microsoft.com/devcontainers/base:noble` with:
 - Node.js (LTS) via the `ghcr.io/devcontainers/features/node:2` feature
+- Python 3.12 via the `ghcr.io/devcontainers/features/python:1` feature
+- Docker-in-Docker via the `ghcr.io/devcontainers/features/docker-in-docker:2` feature
 - The Claude Code CLI feature (`ghcr.io/anthropics/devcontainer-features/claude-code:1.0`)
 
 No package.json, language-specific tooling, or dependency manifest exists yet,
