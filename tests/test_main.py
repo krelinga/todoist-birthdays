@@ -52,3 +52,22 @@ class TestMainWiring:
         assert run_at == time_of_day(9, 30)
         assert str(tz) == "America/Chicago"
         assert tick.__self__.__class__ is ReminderEngine
+        assert tick.__self__._project_name == "Birthdays"
+
+    def test_defaults_project_name_to_inbox_when_unset(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("TODOIST_API_TOKEN", "token-123")
+        monkeypatch.delenv("TODOIST_PROJECT_NAME", raising=False)
+        monkeypatch.setenv("CONFIG_PATH", str(tmp_path / "config.yaml"))
+        monkeypatch.setenv("STATE_PATH", str(tmp_path / "state.json"))
+        monkeypatch.setattr(main_module, "start_http_server", lambda port: None)
+
+        run_forever_calls = []
+        monkeypatch.setattr(
+            main_module,
+            "run_forever",
+            lambda tick, *, tz, run_at, **kwargs: run_forever_calls.append(tick),
+        )
+
+        main_module.main()
+
+        assert run_forever_calls[0].__self__._project_name == "Inbox"

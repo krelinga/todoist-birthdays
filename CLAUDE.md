@@ -57,7 +57,8 @@ uv run ruff check src tests        # lint
 1. `cp config.example.yaml config.yaml` and fill in real people/birthdays
    (gitignored — never commit this file).
 2. `cp .env.example .env` and set `TODOIST_API_TOKEN` (from Todoist's
-   integration settings) and `TODOIST_PROJECT_NAME`.
+   integration settings). `TODOIST_PROJECT_NAME` is optional and defaults to
+   `Inbox` if unset.
 3. `docker compose up --build` — mounts `config.yaml` read-only and persists
    dedupe state to `./data/state.json`.
 

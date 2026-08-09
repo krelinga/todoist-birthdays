@@ -22,6 +22,7 @@ DEFAULT_STATE_PATH = "/data/state.json"
 DEFAULT_TZ = "America/Chicago"
 DEFAULT_RUN_AT = "08:00"
 DEFAULT_METRICS_PORT = "9090"
+DEFAULT_PROJECT_NAME = "Inbox"
 
 
 def _required_env(name: str) -> str:
@@ -47,7 +48,7 @@ def main() -> None:
     )
 
     api_token = _required_env("TODOIST_API_TOKEN")
-    project_name = _required_env("TODOIST_PROJECT_NAME")
+    project_name = os.environ.get("TODOIST_PROJECT_NAME") or DEFAULT_PROJECT_NAME
     tz = ZoneInfo(os.environ.get("TZ", DEFAULT_TZ))
     run_at = parse_run_at(os.environ.get("RUN_AT", DEFAULT_RUN_AT))
     config_path = os.environ.get("CONFIG_PATH", DEFAULT_CONFIG_PATH)
