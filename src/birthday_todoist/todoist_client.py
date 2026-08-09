@@ -1,7 +1,8 @@
 """Retrying Todoist client wrapper (design doc sections 5 & 6).
 
 Every outbound Todoist call goes through `TodoistClient._call`, which
-applies the shared retry policy (3 attempts, exponential backoff + jitter,
+applies the shared retry policy (3 attempts by default, configurable via
+`max_attempts`/`TODOIST_MAX_ATTEMPTS`, exponential backoff + jitter,
 retrying only on network errors / 5xx / 429 -- a 429 honors `Retry-After`)
 and records the metrics from design doc section 7. A 401/403 is its own
 failure mode: it fails fast (no point retrying a bad token) and raises
@@ -24,7 +25,7 @@ from . import metrics
 
 T = TypeVar("T")
 
-MAX_ATTEMPTS = 3
+DEFAULT_MAX_ATTEMPTS = 3
 _BACKOFF = wait_exponential_jitter(initial=1, max=4)
 
 
@@ -72,8 +73,15 @@ def _wait(retry_state) -> float:
 
 
 class TodoistClient:
-    def __init__(self, api_token: str, *, client: TodoistAPI | None = None):
+    def __init__(
+        self,
+        api_token: str,
+        *,
+        client: TodoistAPI | None = None,
+        max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    ):
         self._api = client or TodoistAPI(api_token)
+        self._max_attempts = max_attempts
 
     def _call(self, operation: str, func: Callable[[], T]) -> T:
         def _attempt() -> T:
@@ -103,7 +111,7 @@ class TodoistClient:
 
         retrying = retry(
             reraise=True,
-            stop=stop_after_attempt(MAX_ATTEMPTS),
+            stop=stop_after_attempt(self._max_attempts),
             wait=_wait,
             retry=retry_if_exception(_is_retryable),
         )
@@ -114,7 +122,7 @@ class TodoistClient:
         except Exception as exc:
             metrics.todoist_api_failures_total.labels(operation).inc()
             raise TodoistAPIError(
-                f"{operation} failed after {MAX_ATTEMPTS} attempts"
+                f"{operation} failed after {self._max_attempts} attempts"
             ) from exc
 
     def find_project_id(self, project_name: str) -> str:

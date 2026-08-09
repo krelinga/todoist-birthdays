@@ -13,7 +13,7 @@ from prometheus_client import start_http_server
 from .engine import ReminderEngine
 from .scheduler import run_forever
 from .state import StateStore
-from .todoist_client import TodoistClient
+from .todoist_client import DEFAULT_MAX_ATTEMPTS, TodoistClient
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,16 @@ def parse_run_at(value: str) -> time_of_day:
         raise SystemExit(f"RUN_AT must be HH:MM, got {value!r}") from exc
 
 
+def parse_max_attempts(value: str) -> int:
+    try:
+        max_attempts = int(value)
+    except ValueError as exc:
+        raise SystemExit(f"TODOIST_MAX_ATTEMPTS must be an integer, got {value!r}") from exc
+    if max_attempts < 1:
+        raise SystemExit("TODOIST_MAX_ATTEMPTS must be at least 1")
+    return max_attempts
+
+
 def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
@@ -54,6 +64,9 @@ def main() -> None:
     config_path = os.environ.get("CONFIG_PATH", DEFAULT_CONFIG_PATH)
     state_path = os.environ.get("STATE_PATH", DEFAULT_STATE_PATH)
     metrics_port = int(os.environ.get("METRICS_PORT", DEFAULT_METRICS_PORT))
+    max_attempts = parse_max_attempts(
+        os.environ.get("TODOIST_MAX_ATTEMPTS", str(DEFAULT_MAX_ATTEMPTS))
+    )
 
     start_http_server(metrics_port)
     logger.info("Metrics server listening on :%d/metrics", metrics_port)
@@ -61,7 +74,7 @@ def main() -> None:
     engine = ReminderEngine(
         config_path=config_path,
         state=StateStore(state_path),
-        client=TodoistClient(api_token),
+        client=TodoistClient(api_token, max_attempts=max_attempts),
         project_name=project_name,
     )
 

@@ -140,6 +140,18 @@ class TestCreateTask:
         assert len(sdk.add_task_calls) == 3
         assert counter_value(metrics.todoist_api_failures_total, "create_task") == before + 1
 
+    def test_max_attempts_is_configurable(self):
+        sdk = FakeSDK(add_task_effects=[http_status_error(500)] * 2)
+        client = TodoistClient("token", client=sdk, max_attempts=2)
+
+        with pytest.raises(TodoistAPIError):
+            client.create_task(
+                content="x", project_id="p", due_date=date(2026, 1, 1),
+                deadline_date=date(2026, 1, 1), priority=1,
+            )
+
+        assert len(sdk.add_task_calls) == 2
+
     def test_401_fails_fast_as_auth_error(self):
         sdk = FakeSDK(add_task_effects=[http_status_error(401)])
         client = TodoistClient("token", client=sdk)

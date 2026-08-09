@@ -4,7 +4,8 @@ import pytest
 
 from birthday_todoist import main as main_module
 from birthday_todoist.engine import ReminderEngine
-from birthday_todoist.main import parse_run_at
+from birthday_todoist.main import parse_max_attempts, parse_run_at
+from birthday_todoist.todoist_client import DEFAULT_MAX_ATTEMPTS
 
 
 class TestParseRunAt:
@@ -15,6 +16,19 @@ class TestParseRunAt:
     def test_invalid_format_raises_system_exit(self):
         with pytest.raises(SystemExit):
             parse_run_at("not-a-time")
+
+
+class TestParseMaxAttempts:
+    def test_parses_int(self):
+        assert parse_max_attempts("5") == 5
+
+    def test_non_integer_raises_system_exit(self):
+        with pytest.raises(SystemExit):
+            parse_max_attempts("not-a-number")
+
+    def test_less_than_one_raises_system_exit(self):
+        with pytest.raises(SystemExit):
+            parse_max_attempts("0")
 
 
 class TestMainWiring:
@@ -53,6 +67,26 @@ class TestMainWiring:
         assert str(tz) == "America/Chicago"
         assert tick.__self__.__class__ is ReminderEngine
         assert tick.__self__._project_name == "Birthdays"
+        assert tick.__self__._client._max_attempts == DEFAULT_MAX_ATTEMPTS
+
+    def test_todoist_max_attempts_env_var_is_wired_through(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("TODOIST_API_TOKEN", "token-123")
+        monkeypatch.setenv("TODOIST_PROJECT_NAME", "Birthdays")
+        monkeypatch.setenv("TODOIST_MAX_ATTEMPTS", "7")
+        monkeypatch.setenv("CONFIG_PATH", str(tmp_path / "config.yaml"))
+        monkeypatch.setenv("STATE_PATH", str(tmp_path / "state.json"))
+        monkeypatch.setattr(main_module, "start_http_server", lambda port: None)
+
+        run_forever_calls = []
+        monkeypatch.setattr(
+            main_module,
+            "run_forever",
+            lambda tick, *, tz, run_at, **kwargs: run_forever_calls.append(tick),
+        )
+
+        main_module.main()
+
+        assert run_forever_calls[0].__self__._client._max_attempts == 7
 
     def test_defaults_project_name_to_inbox_when_unset(self, monkeypatch, tmp_path):
         monkeypatch.setenv("TODOIST_API_TOKEN", "token-123")
