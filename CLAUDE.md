@@ -2,15 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project goals and design
+
+THe design doc for this project is located at `docs/design/birthday-todoist-reminder-design.md`.
+
+The goal of this project is to build a system to automatically generate birthday reminders in todoist.
+
 ## Project status
 
 This repository is currently an empty scaffold. It contains only a devcontainer
 configuration (`.devcontainer/devcontainer.json`) — no application code, README,
 build tooling, or tests exist yet.
-
-The repo name ("todoist-birthdays") suggests the intended purpose is a tool that
-syncs or manages birthday reminders via the Todoist API, but no implementation
-has been started.
 
 ## Development environment
 
