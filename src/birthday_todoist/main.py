@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIG_PATH = "/config/config.yaml"
 DEFAULT_STATE_PATH = "/data/state.json"
-DEFAULT_TZ = "UTC"
+DEFAULT_TZ = "America/Chicago"
 DEFAULT_RUN_AT = "08:00"
 DEFAULT_METRICS_PORT = "9090"
 
