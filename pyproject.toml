@@ -1,6 +1,6 @@
 [project]
 name = "birthday-todoist"
-version = "0.1.0"
+version = "1.0.0"
 description = "Automatically generate birthday reminders in Todoist"
 requires-python = ">=3.12"
 dependencies = [
