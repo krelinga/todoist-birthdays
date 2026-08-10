@@ -16,9 +16,15 @@ the retrying Todoist client, the reminder engine, the daily scheduler loop, and
 the `main.py` entrypoint), with a matching test in `tests/` for every module.
 A Dockerfile and docker-compose.yml provide the self-host story.
 
-Not yet done: this hasn't been run end-to-end against a real Todoist account
-(no API token was available while scaffolding), and the changes are local-only
-— nothing has been pushed to GitHub yet, pending review.
+This has been validated end-to-end against a real Todoist account, through the
+actual built Docker image: project resolution, task creation (`due` +
+`deadline` + `priority`), state persistence, and dedupe on a repeat run all
+confirmed working. One finding from that test: Todoist's **Deadlines**
+feature (the `deadline_date` field this app sets on every task) requires a
+**Pro or Business** Todoist plan — on a Free-plan account, task creation
+fails with an HTTP 403 that our client correctly classifies as an auth-type
+failure (fails fast, no retry). There's no plan-detection or fallback in the
+app; it assumes the account can use deadlines.
 
 ## Development environment
 
@@ -78,9 +84,10 @@ There is no push/PR-triggered CI (no lint/test workflow) yet.
 
 ## Next steps for future instances
 
-- Run the container against a real Todoist account/project to validate the
-  end-to-end flow (project resolution, task creation, dedupe across a restart).
 - Consider adding a push/PR-triggered lint+test workflow (only the manual
   image-publish workflow exists so far).
-- Nothing has been pushed to `origin/main` yet — check with the user before
-  pushing local commits.
+- The account used for testing requires a Pro/Business Todoist plan because
+  of the deadline requirement above — if the target account is Free-tier,
+  either drop `deadline_date` from `create_task` or make it configurable.
+- Always confirm with the user before pushing local commits, even though the
+  repo is currently in sync with `origin/main`.
