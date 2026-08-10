@@ -16,11 +16,17 @@ from .todoist_client import TodoistClient
 logger = logging.getLogger(__name__)
 
 _NO_NOTICE_TEMPLATE = "\U0001f382 Wish {name} a happy birthday (turning {age})"
+_NO_NOTICE_TEMPLATE_NO_AGE = "\U0001f382 Wish {name} a happy birthday"
 _ADVANCE_NOTICE_TEMPLATE = "\U0001f382 Prepare for {name}'s birthday (turning {age})"
+_ADVANCE_NOTICE_TEMPLATE_NO_AGE = "\U0001f382 Prepare for {name}'s birthday"
 
 
-def _task_content(person: Person, age: int) -> str:
-    template = _NO_NOTICE_TEMPLATE if person.notice == 0 else _ADVANCE_NOTICE_TEMPLATE
+def _task_content(person: Person, age: int | None) -> str:
+    is_no_notice = person.notice == 0
+    if age is None:
+        template = _NO_NOTICE_TEMPLATE_NO_AGE if is_no_notice else _ADVANCE_NOTICE_TEMPLATE_NO_AGE
+        return template.format(name=person.name)
+    template = _NO_NOTICE_TEMPLATE if is_no_notice else _ADVANCE_NOTICE_TEMPLATE
     return template.format(name=person.name, age=age)
 
 
@@ -83,7 +89,8 @@ class ReminderEngine:
         if self._state.already_sent(name, target.year):
             return
 
-        content = _task_content(person, age_on(person.birthday, target))
+        age = age_on(person.birthday, target) if person.birth_year is not None else None
+        content = _task_content(person, age)
         try:
             self._client.create_task(
                 content=content,

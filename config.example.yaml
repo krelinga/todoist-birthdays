@@ -10,3 +10,6 @@ people:
     birthday: "1985-12-02"
     # notice omitted -> defaults to 0
     # priority omitted -> defaults to p4
+  "Alex Rivera":
+    birthday: "0000-09-23" # unknown birth year: use "0000" for the year, real month/day
+    # the task text omits "(turning N)" when the birth year is unknown; everything else works the same

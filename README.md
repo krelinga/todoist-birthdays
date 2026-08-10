@@ -48,10 +48,18 @@ people:
     birthday: "1985-12-02"
     # notice omitted -> defaults to 0
     # priority omitted -> defaults to p4
+  "Alex Rivera":
+    birthday: "0000-09-23" # unknown birth year: use "0000" for the year, real month/day
+    # the task text omits "(turning N)" when the birth year is unknown; everything else works the same
 ```
 
 The name is normalized (trimmed, lowercased) as the dedupe key, so renaming
 a person in this file starts their dedupe history over.
+
+If you don't know someone's birth year, use `"0000-MM-DD"`. The reminder still
+fires on the correct day (including Feb 29 -> Feb 28 handling in non-leap
+years) and respects `notice`/`priority` as normal — the only difference is
+the created task's text drops "(turning N)" since there's no age to compute.
 
 ## Environment variables
 

@@ -69,6 +69,38 @@ class TestRunOnce:
         ]
         assert state.already_sent("jane doe", 2026) is True
 
+    def test_unknown_birth_year_omits_age_on_birthday(self, tmp_path):
+        engine, _, client = make_engine(
+            tmp_path,
+            """
+            people:
+              "Jane Doe":
+                birthday: "0000-05-14"
+            """,
+        )
+
+        engine.run_once(date(2026, 5, 14))
+
+        assert client.created_tasks[0]["content"] == "\U0001f382 Wish Jane Doe a happy birthday"
+
+    def test_unknown_birth_year_omits_age_on_advance_notice(self, tmp_path):
+        engine, _, client = make_engine(
+            tmp_path,
+            """
+            people:
+              "Jane Doe":
+                birthday: "0000-05-14"
+                notice: 7
+            """,
+        )
+
+        engine.run_once(date(2026, 5, 7))
+
+        assert client.created_tasks[0]["content"] == (
+            "\U0001f382 Prepare for Jane Doe's birthday"
+        )
+        assert client.created_tasks[0]["deadline_date"] == date(2026, 5, 14)
+
     def test_advance_notice_uses_prepare_template_and_priority(self, tmp_path):
         engine, _, client = make_engine(
             tmp_path,
