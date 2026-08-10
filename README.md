@@ -73,6 +73,28 @@ a person in this file starts their dedupe history over.
 | `/config/config.yaml` | read-only | The people/birthdays config, described above. |
 | `/data` | read-write | Persists `state.json` (dedupe state) across restarts. |
 
+## Running the published image
+
+Releases are published to GitHub Container Registry (see
+[Building/publishing the image](#buildingpublishing-the-image) below). Pull a
+tag instead of building locally:
+
+```sh
+docker pull ghcr.io/krelinga/todoist-birthdays:1   # or :1.0 / :1.0.0 to pin more tightly
+
+docker run -d \
+  --restart unless-stopped \
+  --env-file .env \
+  -p 9090:9090 \
+  -v "$(pwd)/config.yaml:/config/config.yaml:ro" \
+  -v "$(pwd)/data:/data" \
+  ghcr.io/krelinga/todoist-birthdays:1
+```
+
+If the package is private, `docker login ghcr.io` first with a
+[personal access token](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#authenticating-to-the-container-registry)
+that has `read:packages` scope.
+
 ## Running without Docker Compose
 
 ```sh
