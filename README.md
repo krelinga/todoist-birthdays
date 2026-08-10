@@ -135,7 +135,10 @@ and `:1.4.2`, plus `:latest` and the commit SHA every time.
 
 ### Cutting a release
 
-1. Bump `version` in `pyproject.toml` (e.g. `"0.1.0"` → `"0.2.0"`) and commit it.
+1. Bump `version` in `pyproject.toml` (e.g. `"0.1.0"` → `"0.2.0"`) and run
+   `uv lock` so `uv.lock` picks up the new version, then commit both files.
+   A pre-commit hook blocks the commit if you forget the `uv lock` step —
+   see [`CLAUDE.md`](CLAUDE.md) for how it's wired up.
 2. Push/merge that commit to `main`.
 3. Go to the repo's Actions tab → "Build and Push Docker Image" → Run workflow.
 4. The workflow reads the version straight off `main`'s `pyproject.toml` at

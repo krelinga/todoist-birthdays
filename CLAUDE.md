@@ -34,7 +34,9 @@ The devcontainer is based on `mcr.microsoft.com/devcontainers/base:noble` with:
 - Docker-in-Docker via the `ghcr.io/devcontainers/features/docker-in-docker:2` feature
 - The Claude Code CLI feature (`ghcr.io/anthropics/devcontainer-features/claude-code:1.0`)
 - `postCreateCommand` installs [uv](https://docs.astral.sh/uv/) (`pip install --user uv`),
-  this project's package/dependency manager
+  this project's package/dependency manager, and points git at the repo's
+  tracked hooks (`git config core.hooksPath .githooks`) — see "Pre-commit
+  hook" below
 
 ## Tech stack
 
@@ -58,6 +60,18 @@ uv run pytest tests/test_dates.py::TestNextBirthday::test_today_is_birthday  # r
 uv run ruff check src tests        # lint
 ```
 
+## Pre-commit hook
+
+`.githooks/pre-commit` runs `uv lock --check` on every commit and blocks it
+if `uv.lock` is out of sync with `pyproject.toml` — most commonly forgetting
+to re-run `uv lock` after bumping `version` (see "Cutting a release" in
+README.md; the release workflow reads that version straight from
+`pyproject.toml`, so a stale lockfile there causes CI failures, not just
+local ones). It's wired up automatically by the devcontainer's
+`postCreateCommand`; outside the devcontainer, run
+`git config core.hooksPath .githooks` once after cloning. If a commit is
+blocked, run `uv lock`, `git add uv.lock`, and commit again.
+
 ## Running locally / authentication
 
 1. `cp config.example.yaml config.yaml` and fill in real people/birthdays
@@ -77,8 +91,9 @@ exist inside the container).
 
 `.github/workflows/docker-publish.yml` is manual-only (`workflow_dispatch`,
 triggered from the Actions tab) — it builds the Dockerfile and pushes to
-`ghcr.io/krelinga/todoist-birthdays`, tagged with the input tag (default
-`latest`) and the commit SHA. Auth uses the automatic `GITHUB_TOKEN`
+`ghcr.io/krelinga/todoist-birthdays`, tagged with `:major`, `:major.minor`,
+and `:major.minor.patch` read from `pyproject.toml`'s `version` field, plus
+`:latest` and the commit SHA. Auth uses the automatic `GITHUB_TOKEN`
 (`permissions: packages: write` in the workflow) — no secrets to create.
 There is no push/PR-triggered CI (no lint/test workflow) yet.
 

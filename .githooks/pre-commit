@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Blocks commits where uv.lock is out of date with pyproject.toml.
+#
+# The release workflow (.github/workflows/docker-publish.yml) reads the
+# image version straight out of pyproject.toml, so a stale uv.lock (e.g.
+# after bumping `version` and forgetting to re-run `uv lock`) can slip
+# through review and only surface as a CI/build failure later.
+set -euo pipefail
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "pre-commit: 'uv' not found on PATH, skipping uv.lock check" >&2
+  exit 0
+fi
+
+if ! uv lock --check >/dev/null 2>&1; then
+  echo "error: uv.lock is out of date with pyproject.toml." >&2
+  echo "       run \`uv lock\`, then \`git add uv.lock\`, and commit again." >&2
+  exit 1
+fi
