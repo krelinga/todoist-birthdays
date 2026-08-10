@@ -99,6 +99,19 @@ section 7 of the design doc for the full metric list and example alert rules
 GitHub Actions workflow that builds and pushes to
 `ghcr.io/krelinga/todoist-birthdays`. Trigger it from the repo's Actions tab.
 
+The image is tagged from the `version` field in `pyproject.toml` (must be
+`MAJOR.MINOR.PATCH`) — a run with `version = "1.4.2"` pushes `:1`, `:1.4`,
+and `:1.4.2`, plus `:latest` and the commit SHA every time.
+
+### Cutting a release
+
+1. Bump `version` in `pyproject.toml` (e.g. `"0.1.0"` → `"0.2.0"`) and commit it.
+2. Push/merge that commit to `main`.
+3. Go to the repo's Actions tab → "Build and Push Docker Image" → Run workflow.
+4. The workflow reads the version straight off `main`'s `pyproject.toml` at
+   run time — there's no separate version input, so make sure the bump is
+   merged first.
+
 ## Development
 
 See [`CLAUDE.md`](CLAUDE.md) for the tech stack, and build/lint/test commands.
