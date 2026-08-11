@@ -81,6 +81,14 @@ the created task's text drops "(turning N)" since there's no age to compute.
 | `/config/config.yaml` | read-only | The people/birthdays config, described above. |
 | `/data` | read-write | Persists `state.json` (dedupe state) across restarts. |
 
+`/data` should be a named Docker volume (as in `docker-compose.yml`), not a
+bind mount. Docker creates named volumes root-owned by default, but the
+container's entrypoint (`docker-entrypoint.sh`) runs as root just long enough
+to `chown` the directory holding `STATE_PATH` to the unprivileged `app` user
+before the app itself starts — so a fresh volume works with no manual setup.
+This also honors a custom `STATE_PATH`, creating and chowning its directory
+if it doesn't already exist.
+
 ## Running the published image
 
 Releases are published to GitHub Container Registry (see
@@ -95,7 +103,7 @@ docker run -d \
   --env-file .env \
   -p 9090:9090 \
   -v "$(pwd)/config.yaml:/config/config.yaml:ro" \
-  -v "$(pwd)/data:/data" \
+  -v todoist-birthdays-data:/data \
   ghcr.io/krelinga/todoist-birthdays:1
 ```
 
@@ -112,7 +120,7 @@ docker run -d \
   --env-file .env \
   -p 9090:9090 \
   -v "$(pwd)/config.yaml:/config/config.yaml:ro" \
-  -v "$(pwd)/data:/data" \
+  -v todoist-birthdays-data:/data \
   todoist-birthdays
 ```
 

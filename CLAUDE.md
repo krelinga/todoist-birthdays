@@ -80,12 +80,28 @@ blocked, run `uv lock`, `git add uv.lock`, and commit again.
    integration settings). `TODOIST_PROJECT_NAME` is optional and defaults to
    `Inbox` if unset.
 3. `docker compose up --build` — mounts `config.yaml` read-only and persists
-   dedupe state to `./data/state.json`.
+   dedupe state to a named `data` volume (see "Container permissions" below).
 
 For a quick one-off run without Docker: `uv run python -m birthday_todoist.main`
 with the same env vars exported and `CONFIG_PATH`/`STATE_PATH` pointed at local
 files (they default to `/config/config.yaml` and `/data/state.json`, which only
 exist inside the container).
+
+## Container permissions
+
+`/data` should always be a named Docker volume, not a bind mount (see
+`docker-compose.yml`). Named volumes are created root-owned by Docker, but
+the app process runs as an unprivileged `app` user (uid 1000) — without
+intervention, writing `state.json` would fail with a permissions error on a
+fresh volume. `docker-entrypoint.sh` (set as the image's `ENTRYPOINT`, ahead
+of the `CMD`) fixes this: the container still starts as root, the entrypoint
+`chown`s the directory holding `STATE_PATH` (default `/data`, but it reads
+the env var so a custom `STATE_PATH` is handled too) to `app`, then execs
+`gosu app "$@"` to drop privileges before the real process starts. This is
+cheap and idempotent, so it runs unconditionally on every container start.
+Verified directly against a real Docker named volume (root-owned by default,
+confirmed via `stat`; confirmed `app`-owned and writable after the
+entrypoint ran, including with a custom nested `STATE_PATH`).
 
 ## CI / image publishing
 

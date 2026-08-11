@@ -12,4 +12,7 @@ services:
       - "9090:9090" # for Prometheus to scrape
     volumes:
       - ./config.yaml:/config/config.yaml:ro
-      - ./data:/data
+      - data:/data
+
+volumes:
+  data:
