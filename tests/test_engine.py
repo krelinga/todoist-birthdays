@@ -171,6 +171,53 @@ class TestRunOnce:
         assert summary.tasks_created == 1
         assert state.already_sent("jane doe", 2026) is True
 
+    def test_new_entry_within_notice_window_fires_on_next_run(self, tmp_path):
+        # Simulates editing config.yaml on disk while the process keeps
+        # running: the first run doesn't know Jane Doe exists yet. She's
+        # then added with a birthday already inside the notice window, and
+        # the very next run picks her up — config.yaml is reloaded from
+        # disk every run, and the engine has no notion of when an entry was
+        # added, only whether state already has a sent-marker for this year.
+        config_path = write_config(
+            tmp_path,
+            """
+            people:
+              "John Smith":
+                birthday: "1985-01-01"
+            """,
+        )
+        state = StateStore(tmp_path / "state.json")
+        client = FakeTodoistClient()
+        engine = ReminderEngine(
+            config_path=config_path,
+            state=state,
+            client=client,
+            project_name="Birthdays",
+        )
+
+        first_summary = engine.run_once(date(2026, 5, 12))
+
+        assert first_summary.tasks_created == 0
+        assert client.created_tasks == []
+
+        write_config(
+            tmp_path,
+            """
+            people:
+              "John Smith":
+                birthday: "1985-01-01"
+              "Jane Doe":
+                birthday: "1990-05-14"
+                notice: 3
+            """,
+        )
+
+        second_summary = engine.run_once(date(2026, 5, 12))
+
+        assert second_summary.tasks_created == 1
+        assert client.created_tasks[0]["deadline_date"] == date(2026, 5, 14)
+        assert state.already_sent("jane doe", 2026) is True
+
     def test_create_task_failure_does_not_mark_state_and_continues(self, tmp_path):
         client = FakeTodoistClient(create_task_error=RuntimeError("boom"))
         engine, state, client = make_engine(
