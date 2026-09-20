@@ -1,10 +1,17 @@
+from datetime import UTC, datetime
 from datetime import time as time_of_day
+from zoneinfo import ZoneInfo
 
 import pytest
 
 from birthday_todoist import main as main_module
 from birthday_todoist.engine import ReminderEngine
-from birthday_todoist.main import parse_max_attempts, parse_run_at, parse_run_on_startup
+from birthday_todoist.main import (
+    _tz_time_converter,
+    parse_max_attempts,
+    parse_run_at,
+    parse_run_on_startup,
+)
 from birthday_todoist.todoist_client import DEFAULT_MAX_ATTEMPTS
 
 
@@ -39,6 +46,24 @@ class TestParseRunOnStartup:
     @pytest.mark.parametrize("value", ["0", "false", "no", "off", ""])
     def test_falsy_values(self, value):
         assert parse_run_on_startup(value) is False
+
+
+class TestTzTimeConverter:
+    def test_renders_timestamp_in_target_timezone_regardless_of_host_tz(self):
+        tz = ZoneInfo("America/Chicago")
+        # 13:00 UTC on 2026-05-14 is 08:00 CDT (UTC-5), independent of
+        # whatever timezone the host running the tests is in.
+        timestamp = datetime(2026, 5, 14, 13, 0, 0, tzinfo=UTC).timestamp()
+
+        result = _tz_time_converter(tz)(timestamp)
+
+        assert (result.tm_year, result.tm_mon, result.tm_mday, result.tm_hour, result.tm_min) == (
+            2026,
+            5,
+            14,
+            8,
+            0,
+        )
 
 
 class TestMainWiring:

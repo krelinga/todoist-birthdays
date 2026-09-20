@@ -5,7 +5,9 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from datetime import datetime
 from datetime import time as time_of_day
+from time import struct_time
 from zoneinfo import ZoneInfo
 
 from prometheus_client import start_http_server
@@ -46,6 +48,28 @@ def parse_run_on_startup(value: str) -> bool:
     return value.strip().lower() in _TRUTHY_VALUES
 
 
+def _tz_time_converter(tz: ZoneInfo):
+    """Build a `logging.Formatter.converter` that renders timestamps in `tz`.
+
+    The default converter (`time.localtime`) follows the OS/libc timezone,
+    which may not match the `TZ` this app was configured with. Log
+    timestamps should agree with the schedule they describe.
+    """
+
+    def converter(timestamp: float) -> struct_time:
+        return datetime.fromtimestamp(timestamp, tz=tz).timetuple()
+
+    return converter
+
+
+def _configure_logging(tz: ZoneInfo) -> None:
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+    formatter.converter = _tz_time_converter(tz)
+    handler.setFormatter(formatter)
+    logging.basicConfig(level=logging.INFO, handlers=[handler])
+
+
 def parse_max_attempts(value: str) -> int:
     try:
         max_attempts = int(value)
@@ -57,15 +81,11 @@ def parse_max_attempts(value: str) -> int:
 
 
 def main() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        stream=sys.stdout,
-    )
+    tz = ZoneInfo(os.environ.get("TZ", DEFAULT_TZ))
+    _configure_logging(tz)
 
     api_token = _required_env("TODOIST_API_TOKEN")
     project_name = os.environ.get("TODOIST_PROJECT_NAME") or DEFAULT_PROJECT_NAME
-    tz = ZoneInfo(os.environ.get("TZ", DEFAULT_TZ))
     run_at = parse_run_at(os.environ.get("RUN_AT", DEFAULT_RUN_AT))
     config_path = os.environ.get("CONFIG_PATH", DEFAULT_CONFIG_PATH)
     state_path = os.environ.get("STATE_PATH", DEFAULT_STATE_PATH)
