@@ -26,6 +26,7 @@ DEFAULT_RUN_AT = "08:00"
 DEFAULT_METRICS_PORT = "9090"
 DEFAULT_PROJECT_NAME = "Inbox"
 DEFAULT_RUN_ON_STARTUP = "false"
+DEFAULT_DETAILED_LOGGING = "false"
 _TRUTHY_VALUES = {"1", "true", "yes", "on"}
 
 
@@ -48,6 +49,10 @@ def parse_run_on_startup(value: str) -> bool:
     return value.strip().lower() in _TRUTHY_VALUES
 
 
+def parse_detailed_logging(value: str) -> bool:
+    return value.strip().lower() in _TRUTHY_VALUES
+
+
 def _tz_time_converter(tz: ZoneInfo):
     """Build a `logging.Formatter.converter` that renders timestamps in `tz`.
 
@@ -62,12 +67,12 @@ def _tz_time_converter(tz: ZoneInfo):
     return converter
 
 
-def _configure_logging(tz: ZoneInfo) -> None:
+def _configure_logging(tz: ZoneInfo, level: int) -> None:
     handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
     formatter.converter = _tz_time_converter(tz)
     handler.setFormatter(formatter)
-    logging.basicConfig(level=logging.INFO, handlers=[handler])
+    logging.basicConfig(level=level, handlers=[handler])
 
 
 def parse_max_attempts(value: str) -> int:
@@ -82,7 +87,10 @@ def parse_max_attempts(value: str) -> int:
 
 def main() -> None:
     tz = ZoneInfo(os.environ.get("TZ", DEFAULT_TZ))
-    _configure_logging(tz)
+    detailed_logging = parse_detailed_logging(
+        os.environ.get("DETAILED_LOGGING", DEFAULT_DETAILED_LOGGING)
+    )
+    _configure_logging(tz, level=logging.DEBUG if detailed_logging else logging.INFO)
 
     api_token = _required_env("TODOIST_API_TOKEN")
     project_name = os.environ.get("TODOIST_PROJECT_NAME") or DEFAULT_PROJECT_NAME
@@ -108,10 +116,11 @@ def main() -> None:
     )
 
     logger.info(
-        "Starting daily reminder loop: RUN_AT=%s TZ=%s RUN_ON_STARTUP=%s",
+        "Starting daily reminder loop: RUN_AT=%s TZ=%s RUN_ON_STARTUP=%s DETAILED_LOGGING=%s",
         run_at,
         tz,
         run_on_startup,
+        detailed_logging,
     )
     run_forever(engine.run_once, tz=tz, run_at=run_at, run_immediately=run_on_startup)
 

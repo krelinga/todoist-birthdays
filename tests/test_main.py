@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime
 from datetime import time as time_of_day
 from zoneinfo import ZoneInfo
@@ -8,6 +9,7 @@ from birthday_todoist import main as main_module
 from birthday_todoist.engine import ReminderEngine
 from birthday_todoist.main import (
     _tz_time_converter,
+    parse_detailed_logging,
     parse_max_attempts,
     parse_run_at,
     parse_run_on_startup,
@@ -46,6 +48,16 @@ class TestParseRunOnStartup:
     @pytest.mark.parametrize("value", ["0", "false", "no", "off", ""])
     def test_falsy_values(self, value):
         assert parse_run_on_startup(value) is False
+
+
+class TestParseDetailedLogging:
+    @pytest.mark.parametrize("value", ["1", "true", "True", "yes", "on"])
+    def test_truthy_values(self, value):
+        assert parse_detailed_logging(value) is True
+
+    @pytest.mark.parametrize("value", ["0", "false", "no", "off", ""])
+    def test_falsy_values(self, value):
+        assert parse_detailed_logging(value) is False
 
 
 class TestTzTimeConverter:
@@ -158,6 +170,44 @@ class TestMainWiring:
         main_module.main()
 
         assert run_forever_calls[0]["run_immediately"] is True
+
+    def test_detailed_logging_defaults_to_info_level(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("TODOIST_API_TOKEN", "token-123")
+        monkeypatch.delenv("DETAILED_LOGGING", raising=False)
+        monkeypatch.setenv("CONFIG_PATH", str(tmp_path / "config.yaml"))
+        monkeypatch.setenv("STATE_PATH", str(tmp_path / "state.json"))
+        monkeypatch.setattr(main_module, "start_http_server", lambda port: None)
+        monkeypatch.setattr(main_module, "run_forever", lambda tick, *, tz, run_at, **kwargs: None)
+
+        configure_logging_calls = []
+        monkeypatch.setattr(
+            main_module,
+            "_configure_logging",
+            lambda tz, level: configure_logging_calls.append(level),
+        )
+
+        main_module.main()
+
+        assert configure_logging_calls == [logging.INFO]
+
+    def test_detailed_logging_env_var_enables_debug_level(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("TODOIST_API_TOKEN", "token-123")
+        monkeypatch.setenv("DETAILED_LOGGING", "true")
+        monkeypatch.setenv("CONFIG_PATH", str(tmp_path / "config.yaml"))
+        monkeypatch.setenv("STATE_PATH", str(tmp_path / "state.json"))
+        monkeypatch.setattr(main_module, "start_http_server", lambda port: None)
+        monkeypatch.setattr(main_module, "run_forever", lambda tick, *, tz, run_at, **kwargs: None)
+
+        configure_logging_calls = []
+        monkeypatch.setattr(
+            main_module,
+            "_configure_logging",
+            lambda tz, level: configure_logging_calls.append(level),
+        )
+
+        main_module.main()
+
+        assert configure_logging_calls == [logging.DEBUG]
 
     def test_defaults_project_name_to_inbox_when_unset(self, monkeypatch, tmp_path):
         monkeypatch.setenv("TODOIST_API_TOKEN", "token-123")
