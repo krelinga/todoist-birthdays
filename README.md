@@ -26,16 +26,18 @@ for the full design.
 ## Quick start
 
 ```sh
-cp config.example.yaml config.yaml   # fill in real people/birthdays
-cp .env.example .env                 # fill in your Todoist API token
+mkdir -p config
+cp config.example.yaml config/config.yaml   # fill in real people/birthdays
+cp .env.example .env                        # fill in your Todoist API token
 docker compose up --build
 ```
 
-`config.yaml` and `.env` are gitignored — never commit them.
+`config/` and `.env` are gitignored — never commit them.
 
 ## Config file: `config.yaml`
 
-Mounted read-only at `/config/config.yaml` and re-read on every tick (no
+The whole `config/` directory is mounted read-only at `/config` (not just the
+file — see "Why a directory mount" below) and re-read on every tick (no
 rebuild needed to add/change people). Keyed by name:
 
 ```yaml
@@ -80,7 +82,7 @@ the created task's text drops "(turning N)" since there's no age to compute.
 
 | Container path | Mode | Purpose |
 |---|---|---|
-| `/config/config.yaml` | read-only | The people/birthdays config, described above. |
+| `/config` | read-only | Directory containing `config.yaml`, described above. |
 | `/data` | read-write | Persists `state.json` (dedupe state) across restarts. |
 
 `/data` should be a named Docker volume (as in `docker-compose.yml`), not a
@@ -90,6 +92,17 @@ to `chown` the directory holding `STATE_PATH` to the unprivileged `app` user
 before the app itself starts — so a fresh volume works with no manual setup.
 This also honors a custom `STATE_PATH`, creating and chowning its directory
 if it doesn't already exist.
+
+### Why a directory mount, not `config.yaml` directly
+
+`/config` bind-mounts the *directory*, not the file, on purpose. Bind-mounting
+a single file attaches the container to that file's specific inode at
+container-start time. Editing the file in place (same inode) is fine, but
+many editors and tools save by writing a new temp file and renaming it over
+the original — that gives the path a new inode on the host, which the
+container's mount doesn't follow, so it keeps reading stale content until the
+container restarts. Mounting the parent directory instead tracks the
+directory entry, so a renamed-in replacement file is picked up immediately.
 
 ## Running the published image
 
@@ -104,7 +117,7 @@ docker run -d \
   --restart unless-stopped \
   --env-file .env \
   -p 9090:9090 \
-  -v "$(pwd)/config.yaml:/config/config.yaml:ro" \
+  -v "$(pwd)/config:/config:ro" \
   -v todoist-birthdays-data:/data \
   ghcr.io/krelinga/todoist-birthdays:1
 ```
@@ -121,7 +134,7 @@ docker run -d \
   --restart unless-stopped \
   --env-file .env \
   -p 9090:9090 \
-  -v "$(pwd)/config.yaml:/config/config.yaml:ro" \
+  -v "$(pwd)/config:/config:ro" \
   -v todoist-birthdays-data:/data \
   todoist-birthdays
 ```
