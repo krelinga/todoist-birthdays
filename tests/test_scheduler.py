@@ -87,3 +87,33 @@ class TestRunForever:
             )
 
         assert sleep_calls == []
+
+    def test_run_immediately_ticks_before_first_sleep(self):
+        clock_values = iter(
+            [
+                datetime(2026, 5, 14, 6, 0, tzinfo=TZ),  # immediate tick date
+                datetime(2026, 5, 14, 6, 0, tzinfo=TZ),  # loop 1: compute target
+                datetime(2026, 5, 14, 6, 0, tzinfo=TZ),  # loop 1: wait_seconds calc
+                datetime(2026, 5, 14, 8, 0, tzinfo=TZ),  # loop 1: post-sleep tick date
+            ]
+        )
+        ticked_dates = []
+        sleep_calls = []
+
+        def tick(today: date):
+            ticked_dates.append(today)
+            if len(ticked_dates) == 2:
+                raise StopLoop
+
+        with pytest.raises(StopLoop):
+            run_forever(
+                tick,
+                tz=TZ,
+                run_at=time_of_day(8, 0),
+                sleep=lambda s: sleep_calls.append(s),
+                now=lambda: next(clock_values),
+                run_immediately=True,
+            )
+
+        assert ticked_dates == [date(2026, 5, 14), date(2026, 5, 14)]
+        assert sleep_calls == [pytest.approx(2 * 3600)]

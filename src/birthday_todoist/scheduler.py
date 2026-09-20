@@ -32,9 +32,19 @@ def run_forever(
     run_at: time_of_day,
     sleep: Callable[[float], None] = time.sleep,
     now: Callable[[], datetime] | None = None,
+    run_immediately: bool = False,
 ) -> None:
-    """Call `tick(today)` once daily at `run_at` in `tz`, forever."""
+    """Call `tick(today)` once daily at `run_at` in `tz`, forever.
+
+    If `run_immediately` is set, an extra tick fires right away before the
+    first scheduled wait, then the loop settles into the normal `run_at`
+    cadence.
+    """
     clock = now or (lambda: datetime.now(tz))
+
+    if run_immediately:
+        logger.info("run_immediately set: ticking once before the first scheduled wait")
+        tick(clock().date())
 
     while True:
         target = next_run_at(clock(), run_at)
