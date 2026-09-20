@@ -171,6 +171,28 @@ class TestRunOnce:
         assert summary.tasks_created == 1
         assert state.already_sent("jane doe", 2026) is True
 
+    def test_new_entry_within_notice_window_fires_immediately(self, tmp_path):
+        # Simulates adding a person to config.yaml when their birthday is
+        # already inside the notice window: nothing distinguishes this from
+        # any other fresh-state run, since the engine has no notion of when
+        # an entry was added — it only checks days-until-birthday vs. notice
+        # and whether state already has a sent-marker for this year.
+        engine, state, client = make_engine(
+            tmp_path,
+            """
+            people:
+              "Jane Doe":
+                birthday: "1990-05-14"
+                notice: 3
+            """,
+        )
+
+        summary = engine.run_once(date(2026, 5, 12))
+
+        assert summary.tasks_created == 1
+        assert client.created_tasks[0]["deadline_date"] == date(2026, 5, 14)
+        assert state.already_sent("jane doe", 2026) is True
+
     def test_create_task_failure_does_not_mark_state_and_continues(self, tmp_path):
         client = FakeTodoistClient(create_task_error=RuntimeError("boom"))
         engine, state, client = make_engine(
