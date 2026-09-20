@@ -23,6 +23,8 @@ DEFAULT_TZ = "America/Chicago"
 DEFAULT_RUN_AT = "08:00"
 DEFAULT_METRICS_PORT = "9090"
 DEFAULT_PROJECT_NAME = "Inbox"
+DEFAULT_RUN_ON_STARTUP = "false"
+_TRUTHY_VALUES = {"1", "true", "yes", "on"}
 
 
 def _required_env(name: str) -> str:
@@ -38,6 +40,10 @@ def parse_run_at(value: str) -> time_of_day:
         return time_of_day(int(hour_str), int(minute_str))
     except ValueError as exc:
         raise SystemExit(f"RUN_AT must be HH:MM, got {value!r}") from exc
+
+
+def parse_run_on_startup(value: str) -> bool:
+    return value.strip().lower() in _TRUTHY_VALUES
 
 
 def parse_max_attempts(value: str) -> int:
@@ -67,6 +73,9 @@ def main() -> None:
     max_attempts = parse_max_attempts(
         os.environ.get("TODOIST_MAX_ATTEMPTS", str(DEFAULT_MAX_ATTEMPTS))
     )
+    run_on_startup = parse_run_on_startup(
+        os.environ.get("RUN_ON_STARTUP", DEFAULT_RUN_ON_STARTUP)
+    )
 
     start_http_server(metrics_port)
     logger.info("Metrics server listening on :%d/metrics", metrics_port)
@@ -78,8 +87,13 @@ def main() -> None:
         project_name=project_name,
     )
 
-    logger.info("Starting daily reminder loop: RUN_AT=%s TZ=%s", run_at, tz)
-    run_forever(engine.run_once, tz=tz, run_at=run_at)
+    logger.info(
+        "Starting daily reminder loop: RUN_AT=%s TZ=%s RUN_ON_STARTUP=%s",
+        run_at,
+        tz,
+        run_on_startup,
+    )
+    run_forever(engine.run_once, tz=tz, run_at=run_at, run_immediately=run_on_startup)
 
 
 if __name__ == "__main__":

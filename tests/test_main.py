@@ -4,7 +4,7 @@ import pytest
 
 from birthday_todoist import main as main_module
 from birthday_todoist.engine import ReminderEngine
-from birthday_todoist.main import parse_max_attempts, parse_run_at
+from birthday_todoist.main import parse_max_attempts, parse_run_at, parse_run_on_startup
 from birthday_todoist.todoist_client import DEFAULT_MAX_ATTEMPTS
 
 
@@ -29,6 +29,16 @@ class TestParseMaxAttempts:
     def test_less_than_one_raises_system_exit(self):
         with pytest.raises(SystemExit):
             parse_max_attempts("0")
+
+
+class TestParseRunOnStartup:
+    @pytest.mark.parametrize("value", ["1", "true", "True", "yes", "on"])
+    def test_truthy_values(self, value):
+        assert parse_run_on_startup(value) is True
+
+    @pytest.mark.parametrize("value", ["0", "false", "no", "off", ""])
+    def test_falsy_values(self, value):
+        assert parse_run_on_startup(value) is False
 
 
 class TestMainWiring:
@@ -87,6 +97,42 @@ class TestMainWiring:
         main_module.main()
 
         assert run_forever_calls[0].__self__._client._max_attempts == 7
+
+    def test_run_on_startup_defaults_to_false(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("TODOIST_API_TOKEN", "token-123")
+        monkeypatch.delenv("RUN_ON_STARTUP", raising=False)
+        monkeypatch.setenv("CONFIG_PATH", str(tmp_path / "config.yaml"))
+        monkeypatch.setenv("STATE_PATH", str(tmp_path / "state.json"))
+        monkeypatch.setattr(main_module, "start_http_server", lambda port: None)
+
+        run_forever_calls = []
+        monkeypatch.setattr(
+            main_module,
+            "run_forever",
+            lambda tick, *, tz, run_at, **kwargs: run_forever_calls.append(kwargs),
+        )
+
+        main_module.main()
+
+        assert run_forever_calls[0]["run_immediately"] is False
+
+    def test_run_on_startup_env_var_is_wired_through(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("TODOIST_API_TOKEN", "token-123")
+        monkeypatch.setenv("RUN_ON_STARTUP", "true")
+        monkeypatch.setenv("CONFIG_PATH", str(tmp_path / "config.yaml"))
+        monkeypatch.setenv("STATE_PATH", str(tmp_path / "state.json"))
+        monkeypatch.setattr(main_module, "start_http_server", lambda port: None)
+
+        run_forever_calls = []
+        monkeypatch.setattr(
+            main_module,
+            "run_forever",
+            lambda tick, *, tz, run_at, **kwargs: run_forever_calls.append(kwargs),
+        )
+
+        main_module.main()
+
+        assert run_forever_calls[0]["run_immediately"] is True
 
     def test_defaults_project_name_to_inbox_when_unset(self, monkeypatch, tmp_path):
         monkeypatch.setenv("TODOIST_API_TOKEN", "token-123")
