@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 from pathlib import Path
 
@@ -45,7 +46,7 @@ def make_engine(tmp_path, config_text, client=None):
 
 
 class TestRunOnce:
-    def test_creates_task_on_birthday_with_default_notice(self, tmp_path):
+    def test_creates_task_on_birthday_with_default_notice(self, tmp_path, caplog):
         engine, state, client = make_engine(
             tmp_path,
             """
@@ -55,7 +56,8 @@ class TestRunOnce:
             """,
         )
 
-        summary = engine.run_once(date(2026, 5, 14))
+        with caplog.at_level(logging.DEBUG, logger="birthday_todoist.engine"):
+            summary = engine.run_once(date(2026, 5, 14))
 
         assert summary == RunSummary(people_checked=1, tasks_created=1, errors=0)
         assert client.created_tasks == [
@@ -68,6 +70,7 @@ class TestRunOnce:
             }
         ]
         assert state.already_sent("jane doe", 2026) is True
+        assert "task created" in caplog.text
 
     def test_unknown_birth_year_omits_age_on_birthday(self, tmp_path):
         engine, _, client = make_engine(
@@ -121,7 +124,7 @@ class TestRunOnce:
         assert client.created_tasks[0]["priority"] == 3
         assert client.created_tasks[0]["deadline_date"] == date(2026, 5, 14)
 
-    def test_outside_notice_window_is_skipped(self, tmp_path):
+    def test_outside_notice_window_is_skipped(self, tmp_path, caplog):
         engine, _, client = make_engine(
             tmp_path,
             """
@@ -132,12 +135,14 @@ class TestRunOnce:
             """,
         )
 
-        summary = engine.run_once(date(2026, 4, 1))
+        with caplog.at_level(logging.DEBUG, logger="birthday_todoist.engine"):
+            summary = engine.run_once(date(2026, 4, 1))
 
         assert summary.tasks_created == 0
         assert client.created_tasks == []
+        assert "outside notice window" in caplog.text
 
-    def test_already_sent_this_year_is_skipped(self, tmp_path):
+    def test_already_sent_this_year_is_skipped(self, tmp_path, caplog):
         engine, state, client = make_engine(
             tmp_path,
             """
@@ -148,10 +153,12 @@ class TestRunOnce:
         )
         state.mark_sent("jane doe", 2026)
 
-        summary = engine.run_once(date(2026, 5, 14))
+        with caplog.at_level(logging.DEBUG, logger="birthday_todoist.engine"):
+            summary = engine.run_once(date(2026, 5, 14))
 
         assert summary.tasks_created == 0
         assert client.created_tasks == []
+        assert "already sent" in caplog.text
 
     def test_missed_run_still_fires_within_notice_window(self, tmp_path):
         # Container was down when the window opened (5 days out); the
