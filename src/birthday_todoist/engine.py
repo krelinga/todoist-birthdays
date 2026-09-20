@@ -84,9 +84,19 @@ class ReminderEngine:
         self, name: str, person: Person, today: date, project_id: str, summary: RunSummary
     ) -> None:
         target = next_birthday(person.birthday, today)
-        if days_until(target, today) > person.notice:
+        days_remaining = days_until(target, today)
+        if days_remaining > person.notice:
+            logger.debug(
+                "%s: outside notice window (%d days until birthday, notice=%d) - skipping",
+                person.name,
+                days_remaining,
+                person.notice,
+            )
             return
         if self._state.already_sent(name, target.year):
+            logger.debug(
+                "%s: reminder already sent for %d - skipping", person.name, target.year
+            )
             return
 
         age = age_on(person.birthday, target) if person.birth_year is not None else None
@@ -107,3 +117,4 @@ class ReminderEngine:
         self._state.mark_sent(name, target.year)
         metrics.tasks_created_total.inc()
         summary.tasks_created += 1
+        logger.debug("%s: task created (deadline=%s)", person.name, target)
