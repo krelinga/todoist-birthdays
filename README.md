@@ -69,6 +69,7 @@ the created task's text drops "(turning N)" since there's no age to compute.
 | `TODOIST_PROJECT_NAME` | No | `Inbox` | Name of the Todoist project reminders are created in. Must already exist. |
 | `TZ` | No | `America/Chicago` | Timezone used to decide when "today" ticks over and when `RUN_AT` fires. |
 | `RUN_AT` | No | `08:00` | Local time (`HH:MM`, 24h) the daily check runs. |
+| `RUN_ON_STARTUP` | No | `false` | If truthy (`1`/`true`/`yes`/`on`), runs once immediately on startup in addition to the normal `RUN_AT` schedule. Handy for testing config changes without waiting for the next scheduled run. |
 | `METRICS_PORT` | No | `9090` | Port the `/metrics` HTTP endpoint listens on. |
 | `TODOIST_MAX_ATTEMPTS` | No | `3` | Retry attempts per Todoist API call before giving up. |
 | `CONFIG_PATH` | No | `/config/config.yaml` | Path to the config file. Only useful if not using the standard mount. |
