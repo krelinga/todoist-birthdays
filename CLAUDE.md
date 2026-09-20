@@ -74,18 +74,35 @@ blocked, run `uv lock`, `git add uv.lock`, and commit again.
 
 ## Running locally / authentication
 
-1. `cp config.example.yaml config.yaml` and fill in real people/birthdays
-   (gitignored — never commit this file).
+1. `mkdir -p config && cp config.example.yaml config/config.yaml` and fill in
+   real people/birthdays (the `config/` directory is gitignored — never
+   commit this file).
 2. `cp .env.example .env` and set `TODOIST_API_TOKEN` (from Todoist's
    integration settings). `TODOIST_PROJECT_NAME` is optional and defaults to
    `Inbox` if unset.
-3. `docker compose up --build` — mounts `config.yaml` read-only and persists
-   dedupe state to a named `data` volume (see "Container permissions" below).
+3. `docker compose up --build` — mounts the `config/` directory (not just the
+   file — see "Config directory mount" below) read-only and persists dedupe
+   state to a named `data` volume (see "Container permissions" below).
 
 For a quick one-off run without Docker: `uv run python -m birthday_todoist.main`
 with the same env vars exported and `CONFIG_PATH`/`STATE_PATH` pointed at local
 files (they default to `/config/config.yaml` and `/data/state.json`, which only
 exist inside the container).
+
+## Config directory mount
+
+`docker-compose.yml` bind-mounts `./config:/config:ro` — the directory, not
+`config.yaml` directly. Bind-mounting a single file attaches the container to
+that file's specific inode at container-start time; editing the file in
+place (same inode) is visible immediately, but the common "atomic save"
+pattern (write a temp file, then `rename()` it over the original path —
+what most editors, `sed -i`, and `git checkout` actually do) gives the host
+path a new inode that the container's file-level mount won't follow, so the
+container keeps serving stale content until it's restarted. Mounting the
+parent directory instead tracks the directory entry, so a renamed-in
+replacement file is picked up on the very next `load_config` call, no
+restart needed. `CONFIG_PATH` inside the container is still
+`/config/config.yaml`, unchanged.
 
 ## Container permissions
 
